@@ -213,7 +213,7 @@ try:
 
     # Set extent
     df.extent = p_map_layer.getExtent()  # Set extent to match selected permit
-    if df.scale < 10000:
+    if df.scale < 300:
         # If small scale (small feature, really zoomed in), set scale to 700%
         df.scale *= 7
     else:
