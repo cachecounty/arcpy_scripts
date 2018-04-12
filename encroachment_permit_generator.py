@@ -1,11 +1,11 @@
 #*****************************************************************************
-# 
+#
 #  Project:  Python Encroachment Permit Generator GP Service Script Tool
 #  Purpose:  Custom scripted permit generator displaying pertinent info from
-#            encroachment feature class table; replaces old tool that uses 
+#            encroachment feature class table; replaces old tool that uses
 #            dynamic text box fields in the mxd.
 #  Author:   Jacob Adams, jacob.adams@cachecounty.org
-# 
+#
 #*****************************************************************************
 # MIT License
 #
@@ -18,7 +18,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in 
+# The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
@@ -26,7 +26,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #*****************************************************************************
 
@@ -214,8 +214,8 @@ try:
     # Set extent
     df.extent = p_map_layer.getExtent()  # Set extent to match selected permit
     if df.scale < 10000:
-        # If small scale (small feature, really zoomed in), set scale to 700%
-        df.scale *= 7
+        # If small scale (small feature, really zoomed in), set scale to 400%
+        df.scale *= 4
     else:
         # If large scale (long or separated features), just add 1000 to scale
         df.scale += 1000
