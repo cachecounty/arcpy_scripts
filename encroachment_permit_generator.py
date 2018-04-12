@@ -114,12 +114,13 @@ try:
         lines = []  # list of each line, will be .join()'ed later to form text
         lines.append("<BOL>Contact Information:</BOL>")
         if fields["applicant"]:
-            lines.append(fields["applicant"])
-        lines.append(u"{}, {}".format(fields["applicant_contact_no"],
+            lines.append("{}".format(fields["applicant"].replace("&", "and")))
+        lines.append("{}, {}".format(fields["applicant_contact_no"],
                                      fields["applicant_email"]))
-        lines.append(u"{}, {}".format(fields["applicant_mailing_add"],
+        lines.append("{}, {}".format(fields["applicant_mailing_add"],
                                      fields["applicant_cty_st_zip"]))
         contact = "\r\n".join(lines)
+        arcpy.AddMessage(contact)
 
     # If there's contractor info, add that.
     if fields["contractor"]:
