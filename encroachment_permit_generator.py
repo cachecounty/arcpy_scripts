@@ -115,9 +115,9 @@ try:
         lines.append("<BOL>Contact Information:</BOL>")
         if fields["applicant"]:
             lines.append(fields["applicant"])
-        lines.append("{}, {}".format(fields["applicant_contact_no"],
+        lines.append(u"{}, {}".format(fields["applicant_contact_no"],
                                      fields["applicant_email"]))
-        lines.append("{}, {}".format(fields["applicant_mailing_add"],
+        lines.append(u"{}, {}".format(fields["applicant_mailing_add"],
                                      fields["applicant_cty_st_zip"]))
         contact = "\r\n".join(lines)
 
@@ -126,11 +126,11 @@ try:
         lines = []  # list of each line, will be .join()'ed later to form text
         lines.append("<BOL>Contractor Information:</BOL>")
         lines.append(fields["contractor"])
-        lines.append("{}, {}".format(fields["contractor_contact_no"],
+        lines.append(u"{}, {}".format(fields["contractor_contact_no"],
                                      fields["contractor_email"]))
-        lines.append("{}, {}".format(fields["contractor_mailing_add"],
+        lines.append(u"{}, {}".format(fields["contractor_mailing_add"],
                                      fields["contractor_cty_st_zip"]))
-        lines.append("License #: {}".format(fields["contractor_license"]))
+        lines.append(u"License #: {}".format(fields["contractor_license"]))
         contractor = "\r\n".join(lines)
 
     # Add everything in the box under the map
@@ -157,7 +157,7 @@ try:
     # Public works inspector notes
     lines = []
     lines.append("<BOL>Road Findings from Public Works Inspector:</BOL>")
-    lines.append("Total Width: {}, Paved Width: {}, Gravel Width: {}, Minimum Culvert Diameter: {}, Winter Maintenance: {}".format(
+    lines.append(u"Total Width: {}, Paved Width: {}, Gravel Width: {}, Minimum Culvert Diameter: {}, Winter Maintenance: {}".format(
         fields["total_road_width"], fields["paved_width"],
         fields["gravel_width"], fields["culvert_diameter"],
         fields["winter_maintenance"]))
@@ -214,8 +214,8 @@ try:
     # Set extent
     df.extent = p_map_layer.getExtent()  # Set extent to match selected permit
     if df.scale < 10000:
-        # If small scale (small feature, really zoomed in), set scale to 400%
-        df.scale *= 4
+        # If small scale (small feature, really zoomed in), set scale to 700%
+        df.scale *= 7
     else:
         # If large scale (long or separated features), just add 1000 to scale
         df.scale += 1000
