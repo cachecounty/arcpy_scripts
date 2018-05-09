@@ -167,9 +167,6 @@ try:
     mxd = arcpy.mapping.MapDocument(mxd_file)
     df = arcpy.mapping.ListDataFrames(mxd)[0]
     layers = arcpy.mapping.ListLayers(mxd)
-    messages.append(df.name)
-    messages.append(str(len(layers)))
-    messages.append(permit_layer)
 
     # Populate text boxes
     # Checks the text box's .name property to find the right text box. In ArcMap
@@ -209,7 +206,6 @@ try:
     for l in layers:
         l.visible = True
         if l.name in permit_layer:
-            messages.append(l.name)
             p_map_layer = l
 
     # Set definition query on permit layer
