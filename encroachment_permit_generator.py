@@ -169,6 +169,7 @@ try:
     layers = arcpy.mapping.ListLayers(mxd)
     messages.append(df.name)
     messages.append(str(len(layers)))
+    messages.append(permit_layer)
 
     # Populate text boxes
     # Checks the text box's .name property to find the right text box. In ArcMap
