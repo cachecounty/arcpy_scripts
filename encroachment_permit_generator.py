@@ -209,7 +209,7 @@ try:
     for l in layers:
         l.visible = True
         messages.append(l.name)
-        if l.name == permit_layer:
+        if permit_layer in l.name:
             p_map_layer = l
 
     # Set definition query on permit layer
