@@ -208,8 +208,8 @@ try:
     # Set layers to be visible, get reference for permit layer to set extent
     for l in layers:
         l.visible = True
-        messages.append(l.name)
-        if permit_layer in l.name:
+        if l.name in permit_layer:
+            messages.append(l.name)
             p_map_layer = l
 
     # Set definition query on permit layer
