@@ -183,7 +183,6 @@ try:
     annex_features = int(arcpy.GetCount_management(annex_layer).getOutput(0))
     # There are intersecting features if the count is more than 0
     if annex_features > 0:
-        show_overlay = True
         annex_areas = []
         with arcpy.da.SearchCursor(annex_layer, "annexation") as annex_cursor:
             for row in annex_cursor:
@@ -339,7 +338,7 @@ try:
             l.visible = True
         elif l.name == "Municipal Boundaries":
             l.visible = True
-        elif l.name == overlay_layer and show_overlay:
+        elif l.name == overlay_layer.rpartition('\\')[2] and show_overlay:
             l.visible = True
         elif l.name == "Aerial":
             l.visible = True
