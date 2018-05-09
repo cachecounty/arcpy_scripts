@@ -1,10 +1,10 @@
 #*****************************************************************************
-# 
+#
 #  Project:  GIS Parcel Summary GP Service Script Tool
 #  Purpose:  Custom, on-demand summary of all geographic features found on or
 #            near a subject parcel. Creates an output pdf for the record.
 #  Author:   Jacob Adams, jacob.adams@cachecounty.org
-# 
+#
 #*****************************************************************************
 # MIT License
 #
@@ -17,7 +17,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in 
+# The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
@@ -25,7 +25,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #*****************************************************************************
 
@@ -337,6 +337,8 @@ try:
         elif l.name == "Municipal Boundaries":
             l.visible = True
         elif l.name == overlay_layer and show_overlay:
+            l.visible = True
+        elif l.name == "Aerial":
             l.visible = True
         else:
             l.visible = False
