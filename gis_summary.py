@@ -241,12 +241,15 @@ try:
         time_delta = str(loop_end - loop_start)
         arcpy.AddMessage("%s took %s" %(layer, time_delta))
 
+    # Trim service name from beginning of layer name
+    trimmed_layers = [l.rpartition('\\')[2] for l in found_layers]
+
     # ========== Create additional analysis areas text ==========
-    if len(found_layers) > 0:
+    if len(trimmed_layers) > 0:
 
         # Split list into three columns
         # Uses numpy.array, numpy.array_split to evenly split into three columns
-        layers_array = array(found_layers)
+        layers_array = array(trimmed_layers)
         splits = array_split(layers_array, 3)
         fl1 = splits[0]
         fl2 = splits[1]
@@ -323,7 +326,7 @@ try:
 
     # Turn on applicable layers and get references for certain layers
     for l in layers:
-        if l.name in found_layers:
+        if l.name in trimmed_layers:
             l.visible = True
             arcpy.AddMessage("Turning on %s" %(l.name))
         elif l.name == "Parcels":
