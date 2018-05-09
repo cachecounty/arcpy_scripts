@@ -205,6 +205,7 @@ try:
     # Set layers to be visible, get reference for permit layer to set extent
     for l in layers:
         l.visible = True
+        messages.append(l.name)
         if l.name == permit_layer:
             p_map_layer = l
 
