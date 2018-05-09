@@ -167,6 +167,8 @@ try:
     mxd = arcpy.mapping.MapDocument(mxd_file)
     df = arcpy.mapping.ListDataFrames(mxd)[0]
     layers = arcpy.mapping.ListLayers(mxd)
+    messages.append(df.name)
+    messages.append(layers)
 
     # Populate text boxes
     # Checks the text box's .name property to find the right text box. In ArcMap
