@@ -1,11 +1,11 @@
 #*****************************************************************************
-# 
+#
 #  Project:  Mailing List GP Service Script Tool
 #  Purpose:  Creates a CSV of the mailing addresses of the owners of all
 #            properties within a specified distance of the subject parcel based
 #            on current records in the Assessor's table.
 #  Author:   Jacob Adams, jacob.adams@cachecounty.org
-# 
+#
 #*****************************************************************************
 # MIT License
 #
@@ -18,7 +18,7 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in 
+# The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
@@ -26,7 +26,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #*****************************************************************************
 
@@ -37,15 +37,15 @@ import csv
 import traceback
 
 # ======== Mailing list tool ========
-# Creates a .csv containing the owner address info for all parcels within the 
-# specified buffer distance. Also creates scratch feature classes for the buffer 
+# Creates a .csv containing the owner address info for all parcels within the
+# specified buffer distance. Also creates scratch feature classes for the buffer
 # and the selected parcels for display in a webmap. Buffer distance is specified
 # in raw values to allow the script to check the distance. The unit is whatever
 # projection the data/mxd use.
 
 # ======== Setup ========
-# Set up script tool in ArcMap: Set parameters as shown below. 
-# Stage service: 
+# Set up script tool in ArcMap: Set parameters as shown below.
+# Stage service:
 #   Run tool on mxd (which is registered in the server's data store) in arcmap.
 #   Share results as geoprocessing service.
 #   Use "Save A Service Definition" rather than publishing or overwriting.
@@ -82,26 +82,28 @@ address_fields_raw = arcpy.GetParameterAsText(6) # Multivalue, Field, derived fr
 # Parameter 8 is buffer feature class- Feature Layer, derived output
 # Parameter 9 is neighboring parcels feature class- Feature Layer, derived output
 try:
+    arcpy.AddMessage(parcel_layer)
+
     # Set up variables
     # Split multivalue parameter on ";" to get list
     TID = TIDs.split(";")
     address_fields = address_fields_raw.split(";")
-    
+
     # Limit to prevent selecting the entire county
     buffer_max = 1000
 
     # Table view name
     table_view = "assessor_table_view"
-    
+
     # temp fc for surrounding parcels
     surrounding_parcels_fc = "in_memory\\surrounding_fc"
-    
+
     # Path to buffer fc- feature class names can't have '-' in them
     buffer_fc = os.path.join(arcpy.env.scratchGDB, "buffer%s" %(TID[0]).replace('-', '_'))
-     
+
     # Path to selected layer
     selected_fc = os.path.join(arcpy.env.scratchGDB, "selected%s" %(TID[0]).replace('-', '_'))
-    
+
     # Clear any selections and in_memory objects for safety
     arcpy.SelectLayerByAttribute_management(parcel_layer, "CLEAR_SELECTION")
     arcpy.Delete_management("in_memory")
@@ -116,7 +118,7 @@ try:
     # Regex pattern for parcel IDs
     pattern = "[0-9]{2}-[0-9]{3}-[0-9]{4}"
 
-    # Make sure parcel numbers are valid 
+    # Make sure parcel numbers are valid
     for tid in TID:
         if tid and tid != "#":
             # Make sure the parcel ID is formatted correctly
@@ -131,13 +133,13 @@ try:
                 if sum(1 for _ in search_cursor) < 1: #sums number of records
                     raise Exception("Cannot find parcel ID " + tid + " in parcel " +
                                       "list.")
-    
+
     # ========= Select subject parcels ===========
-    # Wrap parcel id's in single quotes for where clauses    
-    parcel_list = ["\'%s\'" %(p) for p in TID]     
-        
+    # Wrap parcel id's in single quotes for where clauses
+    parcel_list = ["\'%s\'" %(p) for p in TID]
+
     # Set definition query for subject parcels
-    if len(parcel_list) > 1:   
+    if len(parcel_list) > 1:
         tid_string = ", ".join(parcel_list)
     elif len(parcel_list) == 1:
         tid_string = parcel_list[0]
@@ -149,52 +151,52 @@ try:
 
     # Add all desired parcels to selection
     arcpy.SelectLayerByAttribute_management(parcel_layer, "ADD_TO_SELECTION", dq)
-    
+
     # ========= Create feature classes for buffer and neighbor parcels ===========
     # Clear out buffer and selected fc's if they already exist
     if arcpy.Exists(buffer_fc):
         arcpy.Delete_management(buffer_fc)
     if arcpy.Exists(selected_fc):
         arcpy.Delete_management(selected_fc)
-        
+
     # Create buffer to display for visual clarity
-    arcpy.Buffer_analysis(parcel_layer, buffer_fc, buffer_distance, 
+    arcpy.Buffer_analysis(parcel_layer, buffer_fc, buffer_distance,
                           dissolve_option = "ALL")
-    arcpy.SetParameter(8, buffer_fc)            
-    
+    arcpy.SetParameter(8, buffer_fc)
+
     # Select nearby features
-    selection = arcpy.SelectLayerByLocation_management(parcel_layer, 
+    selection = arcpy.SelectLayerByLocation_management(parcel_layer,
                                                 overlap_type = "WITHIN_A_DISTANCE",
-                                                select_features = parcel_layer, 
-                                                search_distance = buffer_distance, 
-                                                selection_type = "NEW_SELECTION")    
-    
+                                                select_features = parcel_layer,
+                                                search_distance = buffer_distance,
+                                                selection_type = "NEW_SELECTION")
+
     # Make layer of selected features to display for visual clarity
     arcpy.CopyFeatures_management(parcel_layer, selected_fc)
     arcpy.SetParameter(9, selected_fc)
-    
-    # ========= Create table view of neighbor parcels from assessor ===========    
+
+    # ========= Create table view of neighbor parcels from assessor ===========
     # Get nearby parcel IDs
     nearby_parcels = []
     with arcpy.da.SearchCursor(parcel_layer, tid_field) as parcel_cursor:
         nearby_parcels = ["\'%s\'" %(r[0]) for r in parcel_cursor]
-            
+
     # Table definition query
-    if len(nearby_parcels) > 1:   
+    if len(nearby_parcels) > 1:
         table_tid_string = ", ".join(nearby_parcels)
     elif len(nearby_parcels) == 1:
         table_tid_string = nearby_parcels[0]
     else:
         table_tid_string = ""
     table_where = "%s IN (%s)" %(table_tid_field, table_tid_string)
-    
-    # Make table view with subsetted entries 
+
+    # Make table view with subsetted entries
     arcpy.MakeTableView_management(assessor_table, table_view, table_where)
-    
-    # ========= Write out to csv =========== 
+
+    # ========= Write out to csv ===========
     arcpy.AddMessage("Creating CSV...")
-    
-    # Create CSV of records from new feature class 
+
+    # Create CSV of records from new feature class
     csv_file = os.path.join(arcpy.env.scratchFolder, "Addresses.csv")
     with open(csv_file, 'w') as csvfile:
         csvfile.write("sep=|\n")
@@ -205,7 +207,7 @@ try:
                 writer.writerow(row)
 
     # Sends path of the csv file back to the service handler
-    arcpy.SetParameter(7, csv_file) 
+    arcpy.SetParameter(7, csv_file)
 
 except Exception:
     e = sys.exc_info()
@@ -213,7 +215,7 @@ except Exception:
     err = "%s\n%s" %(tbinfo, e[1])
     arcpy.AddError(err)
 
-# Make sure the in_memory data are removed no matter what happens     
+# Make sure the in_memory data are removed no matter what happens
 finally:
     # Be a good citizen and delete the in_memory workspace
     arcpy.Delete_management("in_memory")
