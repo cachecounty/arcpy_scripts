@@ -28,18 +28,22 @@
 # THE SOFTWARE.
 #*****************************************************************************
 
+# !!!!!!
+#
+# NOTE!
+#
+# This tool has not been tested extensively and should not be relied on for
+# official voting info. It is completely dependent on the accuracy of the
+# address locator(s) used and the accuracy of the precinct feature class.
+#
+# !!!!!!
+
 import arcpy
 import os
 import sys
 import traceback
 
 # ========== Parameters from ArcMap Script Tool ==========
-
-# All layers/table views should be in the MXD and selected from the dropdown
-# list. The mxd_file should be on the server and accessed using a
-# folder connection that uses the UNC path instead of a drive letter (i.e.,
-# "\\server\map_docs" instead of "Y:\"
-
 address = arcpy.GetParameterAsText(0)  # Text
 locator = arcpy.GetParameterAsText(1)  # Address Locator Service
 precinct_layer = arcpy.GetParameterAsText(2)  # Feature Layer
