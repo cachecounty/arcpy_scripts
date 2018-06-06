@@ -30,7 +30,6 @@
 
 import arcpy
 import os
-#import datetime
 import sys
 import traceback
 
@@ -42,36 +41,51 @@ import traceback
 # "\\server\map_docs" instead of "Y:\"
 
 address = arcpy.GetParameterAsText(0)  # Text
-locator = arcpy.GetParameterAsText(1)  # ???
+locator = arcpy.GetParameterAsText(1)  # Address Locator Service
 precinct_layer = arcpy.GetParameterAsText(2)  # Feature Layer
 precinct_field = arcpy.GetParameterAsText(3)  # Field
 # Parameter 4 is precinct ID
-# Parameter 5 is output messages
+# Parameter 5 is geocoded point x/y
+# Parameter 6 is output messages
+# Parameter 7 is error messages
 
-# When sharing service, parcel parameter should be User Defined Value, all
+# When sharing service, address parameter should be User Defined Value, all
 # others should be Constant Value.
 
 # ========== Set up non-paramter variables ==========
-# start = datetime.datetime.now()
 address_point_fc = "in_memory\\address_point"
 address_point_layer = "address_point_layer"
-#scratch_table = os.path.join(arcpy.env.scratchGDB, "addr_table")
-scratch_table = "in_memory\\addr_table"
+scratch_table = os.path.join(arcpy.env.scratchGDB, "addr_table")
+#scratch_table = "in_memory\\addr_table"
 addr_table_view = "addr_table_view"
 address_field = "address"
 
 # Precinct to be returned
 precinct = ''
 
+# Geocodded x/y point in WGS84
+xy = ()
+
 # Output messages
-messages = []
+match_info = ''
+errors = []
 
 # Clean up in_memory for safety
 arcpy.Delete_management("in_memory")
 
 try:
+    # We have to use the scratch gdb because ArcGIS tries to copy over the
+    # in_memory table for whatever reason, then proceeds to append records to
+    # it instead of overwriting it every time. Using the gdb introduces several
+    # disk accesses that probably slow it down a little bit, but it shouldn't
+    # be too unbearable.
+
+    # Delete the old table.
+    if arcpy.Exists(scratch_table):
+        arcpy.Delete_management(scratch_table)
+
     # Create the table and associated view to hold the address
-    arcpy.CreateTable_management("in_memory", "addr_table")
+    arcpy.CreateTable_management(arcpy.env.scratchGDB, "addr_table")
     arcpy.MakeTableView_management(scratch_table, addr_table_view)
 
     # Add the address field and copy the address to the table
@@ -82,14 +96,17 @@ try:
     # Geocode the address
     arcpy.GeocodeAddresses_geocoding(addr_table_view, locator, "'Single Line Input' {} VISIBLE NONE".format(address_field), address_point_fc)
 
-    # Make sure we have a match
+    # Make sure we have a match, translate point to Web Mercator
     arcpy.MakeFeatureLayer_management(address_point_fc, address_point_layer)
-    with arcpy.da.SearchCursor(address_point_layer, ["Status", "SHAPE@XY"]) as point_sc:
+    with arcpy.da.SearchCursor(address_point_layer, ["Status", "SHAPE@XY", "SHAPE@"]) as point_sc:
         for row in point_sc:
-            messages.append(str(row[1]))
+            match_info = "Type: {}, Location: {}".format(row[0], str(row[1]))
             if row[0] not in ['M', 'T']:
-                messages.append(row[0])
                 raise ValueError("Address not found: {}".format(address))
+
+            # If it is a valid match, translate to web mercator
+            web_point = row[2].projectAs(arcpy.SpatialReference(3857))
+            xy = (web_point.centroid.X, web_point.centroid.Y)
 
     # Select Precinct
     arcpy.SelectLayerByLocation_management(precinct_layer, "CONTAINS",
@@ -105,19 +122,22 @@ try:
     with arcpy.da.SearchCursor(precinct_layer, precinct_field) as sc:
         for row in sc:
             precinct = row[0]
+
     arcpy.SetParameterAsText(4, precinct)
 
+# Arcpy error handling
 except arcpy.ExecuteError:
     # Log the errors as warnings on the server (adding as errors would cause the task to fail)
     arcpy.AddWarning(arcpy.GetMessages(2))
 
     # Pass the exception message to the user
-    messages.append("ERROR: ")
-    messages.append(arcpy.GetMessages(2))
+    errors.append("ERROR")
+    errors.append(arcpy.GetMessages(2))
 
     # Return an error instead of a precinct code
     arcpy.SetParameter(4, "Error")
 
+# ValueErrors are thrown in several places as sanity checks
 except ValueError as ve:
     # Get the traceback object
     tb = sys.exc_info()[2]
@@ -132,12 +152,13 @@ except ValueError as ve:
     arcpy.AddWarning(msgs)
 
     # Tell the user to use a valid Parcel ID
-    messages.append("ERROR: ")
-    messages.append(ve.args[0])
+    errors.append("ERROR")
+    errors.append(ve.args[0])
 
     # Return an error instead of a precinct code
     arcpy.SetParameter(4, "Error")
 
+# And any other errors
 except Exception as e:
     # Get the traceback object
     tb = sys.exc_info()[2]
@@ -152,11 +173,14 @@ except Exception as e:
     arcpy.AddWarning(msgs)
 
     # Pass the exception message to the user
-    messages.append(e.args[0])
+    errors.append(e.args[0])
 
     # Return an error instead of a precinct code
     arcpy.SetParameter(4, "Error")
 
+# Set all the output parameters
 finally:
-    output_string = "\n".join(messages)
-    arcpy.SetParameterAsText(5, output_string)
+    arcpy.SetParameterAsText(5, str(xy))
+    arcpy.SetParameterAsText(6, match_info)
+    error_string = '---'.join(errors)
+    arcpy.SetParameterAsText(7, error_string)
