@@ -55,7 +55,8 @@ precinct_field = arcpy.GetParameterAsText(3)  # Field
 # start = datetime.datetime.now()
 address_point_fc = "in_memory\\address_point"
 address_point_layer = "address_point_layer"
-scratch_table = os.path.join(arcpy.env.scratchGDB, "addr_table")
+#scratch_table = os.path.join(arcpy.env.scratchGDB, "addr_table")
+scratch_table = "in_memory\\addr_table"
 addr_table_view = "addr_table_view"
 address_field = "address"
 
@@ -65,24 +66,29 @@ precinct = ''
 # Output messages
 messages = []
 
+# Clean up in_memory for safety
+arcpy.Delete_management("in_memory")
+
 try:
     # Create the table and associated view to hold the address
-    arcpy.CreateTable_management(arcpy.env.scratchGDB, "addr_table")
+    arcpy.CreateTable_management("in_memory", "addr_table")
     arcpy.MakeTableView_management(scratch_table, addr_table_view)
 
     # Add the address field and copy the address to the table
     arcpy.AddField_management(addr_table_view, address_field, "TEXT", 200)
     with arcpy.da.InsertCursor(addr_table_view, address_field) as ic:
-        ic.insertRow(address)
+        ic.insertRow((address,))
 
     # Geocode the address
-    arcpy.GeocodeAddresses_gecoding(addr_table_view, locator, "'Single Line Input' {} VISIBLE NONE".format(address_field), address_point_fc)
+    arcpy.GeocodeAddresses_geocoding(addr_table_view, locator, "'Single Line Input' {} VISIBLE NONE".format(address_field), address_point_fc)
 
     # Make sure we have a match
     arcpy.MakeFeatureLayer_management(address_point_fc, address_point_layer)
-    with arcpy.da.SearchCursor(address_point_layer, "Status") as point_sc:
+    with arcpy.da.SearchCursor(address_point_layer, ["Status", "SHAPE@XY"]) as point_sc:
         for row in point_sc:
-            if row[0] != 'M':
+            messages.append(str(row[1]))
+            if row[0] not in ['M', 'T']:
+                messages.append(row[0])
                 raise ValueError("Address not found: {}".format(address))
 
     # Select Precinct
@@ -149,7 +155,7 @@ except Exception as e:
     messages.append(e.args[0])
 
     # Return an error instead of a precinct code
-    arcpy.SetParameterAs(4, "Error")
+    arcpy.SetParameter(4, "Error")
 
 finally:
     output_string = "\n".join(messages)
