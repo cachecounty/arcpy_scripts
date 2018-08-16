@@ -40,8 +40,8 @@ from numpy import array, array_split
 # ========== Parameters from ArcMap Script Tool ==========
 
 # All layers/table views should be in the MXD and selected from the dropdown
-# list. The mxd_file and legend_pdf should be on the server and accessed using a
-# folder connection that uses the UNC path instead of a drive letter (i.e.,
+# list. The mxd_file and legend_pdf should be on the server and accessed using
+# a folder connection that uses the UNC path instead of a drive letter (i.e.,
 # "\\server\map_docs" instead of "Y:\"
 
 parcel = arcpy.GetParameterAsText(0)  # Text
@@ -50,11 +50,13 @@ solo_table = arcpy.GetParameterAsText(2)  # Table view
 overlay_layer = arcpy.GetParameterAsText(3)  # Feature Layer
 muni_layer = arcpy.GetParameterAsText(4)  # Feature Layer
 annex_layer = arcpy.GetParameterAsText(5)  # Feature Layer
-layers_raw = arcpy.GetParameterAsText(6).split(';')  # Multivalue Feature Layers
-mxd_file = arcpy.GetParameterAsText(7)  # File, MXD with layers and layout
-legend_pdf = arcpy.GetParameterAsText(8)  # File, P&Z produced legend and explanation
-# Parameter 9 is output messages
-# Parameter 10 is pdf out path
+subdivision_layer = arcpy.GetParameterAsText(6)  # Feature Layer
+legal_table = arcpy.GetParameterAsText(7)  # Table view
+layers_raw = arcpy.GetParameterAsText(8).split(';')  # Multivalue Feature Layers
+mxd_file = arcpy.GetParameterAsText(9)  # File, MXD with layers and layout
+legend_pdf = arcpy.GetParameterAsText(10)  # File, P&Z produced legend and explanation
+# Parameter 11 is output messages
+# Parameter 12 is pdf out path
 
 # When sharing service, parcel parameter should be User Defined Value, all
 # others should be Constant Value.
@@ -70,18 +72,19 @@ try:
                    "owner_address2", "owner_city_state_zip",
                    "property_address", "property_city", "acreage"]
     parcel_fields = ["zone_primary", "zone_secondary"]
+    legal_fields = ["parcel_number", "2006_parcel"]
 
     # Fudge factor for selections to ensure no nearby areas are missed
     buffer_distance = 100
 
-    # For some reason, some layer names are surrounded by "'" while others aren't
+    # For some reason, some layer names are surrounded by ' while others aren't
     layers_to_check = [ly.replace("'", "") for ly in layers_raw]
 
     # Set up text box variables
-    # To set a text box to blank, you must pass " ". A simple "" (no space) will
-    # error out when you try to set the .text property. These initial values will
-    # only be overwritten later on if the values from the table/feature class are
-    # not "".
+    # To set a text box to blank, you must pass " ". A simple "" (no space)
+    # will error out when you try to set the .text property. These initial
+    # values will only be overwritten later on if the values from the
+    # table/feature class are not "".
     pnum = parcel
     date = datetime.datetime.today().strftime('Generated on %d %b. %Y at %I:%M %p')
     paddr = "(Not Available)"
@@ -92,6 +95,7 @@ try:
     coverlay = " "
     jurisdiction = " "
     annex = " "
+    legality = " "
     results1 = " "
     results2 = " "
     results3 = " "
@@ -138,11 +142,35 @@ try:
     # ========== Legality Check ==========
     # Subdivision check
     # Create centroid
+    centroid_fc = "in_memory\\centroids"
+    arcpy.FeatureToPoint_management(parcel_layer, centroid_fc,
+                                    point_location="INSIDE")
     # select features from subdivision_layer that contain the centroid
+    arcpy.SelectLayerByLocation_management(subdivision_layer,
+                                           "CONTAINS",
+                                           centroid_fc,
+                                           selction_type="NEW_SELECTION")
     # If count is > 0, potential subdivision
-    # if not potential subdivision, check 2006 existence
-    # if yes, potential 2006
-    # else, potential restricted
+    subdivision_count = int(arcpy.GetCount_management(subdivision_layer).getOutput(0))
+
+    # 2006 check
+    legal_where = "parcel_number = '%s'" % (parcel)
+    with arcpy.da.SearchCursor(legal_table, legal_fields, legal_where) as solo_cursor:
+        for row in solo_cursor:
+            # Gracefully handle no-values ("None"s) from table, cast all to
+            # str-- <Null> in table comes in as "None" type
+            str_row = ["" if f is None else str(f) for f in row]
+
+            #if something:
+            legal_check = True
+
+    # Set legality variable
+    if subdivision_count > 0:
+        legality = "Potentially a subdivision lot"
+    elif legal_check:
+        legality = "Existed as of August 8 2006"
+    else:
+        legality = "Potentially restricted"
 
     # ========== County Zoning Info From Feature Class ==========
     arcpy.AddMessage("Reading from parcel feature class...")
@@ -330,6 +358,8 @@ try:
             box.text = annex
         elif box.text == "coverlay":
             box.text = coverlay
+        elif box.text == "legality":
+            box.text = legality
         elif box.text == "Results1":
             box.text = results1
         elif box.text == "Results2":
@@ -382,7 +412,7 @@ try:
     del pdf_doc
 
     # Return pdf
-    arcpy.SetParameter(10, out_path)
+    arcpy.SetParameter(12, out_path)
 
     messages.append("Click the link below to download the parcel summary")
 
@@ -398,7 +428,7 @@ except arcpy.ExecuteError:
     messages.append(arcpy.GetMessages(2))
 
     # Use a bad link for the output pdf
-    arcpy.SetParameter(10, "Error")
+    arcpy.SetParameter(12, "Error")
 
 except ValueError as ve:
     # Get the traceback object
@@ -420,7 +450,7 @@ except ValueError as ve:
     messages.append(ve.args[0])
 
     # Use a bad link for the output pdf
-    arcpy.SetParameter(10, "Please fix Parcel ID and run tool again")
+    arcpy.SetParameter(12, "Please fix Parcel ID and run tool again")
 
 except Exception as e:
     # Get the traceback object
@@ -441,19 +471,8 @@ except Exception as e:
     messages.append(e.args[0])
 
     # Use a bad link for the output pdf
-    arcpy.SetParameter(10, "ERROR")
+    arcpy.SetParameter(12, "ERROR")
 
 finally:
     output_string = "\n".join(messages)
-    arcpy.SetParameterAsText(9, output_string)
-
-###
-# Legality
-# 1: Check if subdivision
-#   a: centroid of parcel
-#   b: is centroid in subdivision layer?
-# 2: Check if existed prior to 9 Aug 2006
-# Potential Legality Options:
-#   * Potentially part of a subdivision
-#   * Potentially existed as of 8 August 2006
-#   * Potentially restricted
+    arcpy.SetParameterAsText(11, output_string)
