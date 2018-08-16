@@ -44,15 +44,15 @@ from numpy import array, array_split
 # folder connection that uses the UNC path instead of a drive letter (i.e.,
 # "\\server\map_docs" instead of "Y:\"
 
-parcel = arcpy.GetParameterAsText(0) # Text
-parcel_layer = arcpy.GetParameterAsText(1) # Feature Layer
-solo_table = arcpy.GetParameterAsText(2) # Table view
-overlay_layer = arcpy.GetParameterAsText(3) # Feature Layer
-muni_layer = arcpy.GetParameterAsText(4) # Feature Layer
-annex_layer = arcpy.GetParameterAsText(5)# Feature Layer
-layers_raw = arcpy.GetParameterAsText(6).split(';') # Multivalue Feature Layers
-mxd_file = arcpy.GetParameterAsText(7) # File, MXD with layers and layout
-legend_pdf = arcpy.GetParameterAsText(8) # File, P&Z produced legend and explanation
+parcel = arcpy.GetParameterAsText(0)  # Text
+parcel_layer = arcpy.GetParameterAsText(1)  # Feature Layer
+solo_table = arcpy.GetParameterAsText(2)  # Table view
+overlay_layer = arcpy.GetParameterAsText(3)  # Feature Layer
+muni_layer = arcpy.GetParameterAsText(4)  # Feature Layer
+annex_layer = arcpy.GetParameterAsText(5)  # Feature Layer
+layers_raw = arcpy.GetParameterAsText(6).split(';')  # Multivalue Feature Layers
+mxd_file = arcpy.GetParameterAsText(7)  # File, MXD with layers and layout
+legend_pdf = arcpy.GetParameterAsText(8)  # File, P&Z produced legend and explanation
 # Parameter 9 is output messages
 # Parameter 10 is pdf out path
 
@@ -66,7 +66,9 @@ start = datetime.datetime.now()
 messages = []
 
 try:
-    solo_fields = ["parcel_number", "owner_name", "owner_address1", "owner_address2", "owner_city_state_zip", "property_address", "property_city", "acreage"]
+    solo_fields = ["parcel_number", "owner_name", "owner_address1",
+                   "owner_address2", "owner_city_state_zip",
+                   "property_address", "property_city", "acreage"]
     parcel_fields = ["zone_primary", "zone_secondary"]
 
     # Fudge factor for selections to ensure no nearby areas are missed
@@ -106,8 +108,9 @@ try:
             raise ValueError("Parcel ID must be in the format YY-YYY-YYYY, where Y is a single digit number. For example, 06-019-0009.")
 
     # Select subject parcel
-    where = "tax_id = '%s'" %(parcel)
-    arcpy.SelectLayerByAttribute_management(parcel_layer, "NEW_SELECTION", where)
+    where = "tax_id = '%s'" % (parcel)
+    arcpy.SelectLayerByAttribute_management(parcel_layer, "NEW_SELECTION",
+                                            where)
 
     # Make sure it's a real parcel
     parcel_count = int(arcpy.GetCount_management(parcel_layer).getOutput(0))
@@ -117,7 +120,7 @@ try:
     # ========== Solo Table Info ==========
     arcpy.AddMessage("Reading from solo table...")
 
-    solo_where = "parcel_number = '%s'" %(parcel)
+    solo_where = "parcel_number = '%s'" % (parcel)
     with arcpy.da.SearchCursor(solo_table, solo_fields, solo_where) as solo_cursor:
         for row in solo_cursor:
             # Gracefully handle no-values ("None"s) from table, cast all to str
@@ -132,6 +135,14 @@ try:
             if str_row[2] or str_row[3] or str_row[4]:
                 oaddr = str_row[2] + " " + str_row[3] + "\r\n" + str_row[4]
 
+    # ========== Legality Check ==========
+    # Subdivision check
+    # Create centroid
+    # select features from subdivision_layer that contain the centroid
+    # If count is > 0, potential subdivision
+    # if not potential subdivision, check 2006 existence
+    # if yes, potential 2006
+    # else, potential restricted
 
     # ========== County Zoning Info From Feature Class ==========
     arcpy.AddMessage("Reading from parcel feature class...")
@@ -139,18 +150,17 @@ try:
     with arcpy.da.SearchCursor(parcel_layer, parcel_fields, where) as parcel_cursor:
         for row in parcel_cursor:
             str_row = ["" if f is None else f for f in row]
-            if str_row[1]: # If there are two zones
+            if str_row[1]:  # If there are two zones
                 czone = str_row[0] + " / " + str_row[1]
             elif "CITY" in str_row[0]:
                 czone = "Contact City for Zoning"
             elif str_row[0]:
                 czone = str_row[0]
 
-
-    # For the next four checks, we do a select by location to get the areas that
-    # contain the subject parcel. We then check the number of selections- if it's
-    # more than 0, we want the info. If it's 0, there is no overlay/annex area/city/
-    # sensitive area for that parcel.
+    # For the next four checks, we do a select by location to get the areas
+    # that contain the subject parcel. We then check the number of selections-
+    # if it's more than 0, we want the info. If it's 0, there is no
+    # overlay/annex area/city/ sensitive area for that parcel.
 
     # ========== Overlay Zones ==========
     arcpy.AddMessage("Detecting Overlay zones...")
@@ -174,12 +184,14 @@ try:
 
     # ========== Future Annexation Info ==========
     arcpy.AddMessage("Detecting Annexation Info...")
-    arcpy.SelectLayerByLocation_management(annex_layer, "CONTAINS", parcel_layer,
-                                           selection_type = "NEW_SELECTION")
-    # Additional selection to grab any parcels that cross boundaries
-    arcpy.SelectLayerByLocation_management(annex_layer, "CROSSED_BY_THE_OUTLINE_OF",
+    arcpy.SelectLayerByLocation_management(annex_layer, "CONTAINS",
                                            parcel_layer,
-                                           selection_type = "ADD_TO_SELECTION")
+                                           selection_type="NEW_SELECTION")
+    # Additional selection to grab any parcels that cross boundaries
+    arcpy.SelectLayerByLocation_management(annex_layer,
+                                           "CROSSED_BY_THE_OUTLINE_OF",
+                                           parcel_layer,
+                                           selection_type="ADD_TO_SELECTION")
     annex_features = int(arcpy.GetCount_management(annex_layer).getOutput(0))
     # There are intersecting features if the count is more than 0
     if annex_features > 0:
@@ -194,15 +206,17 @@ try:
     arcpy.SelectLayerByAttribute_management(annex_layer, "CLEAR_SELECTION")
 
     # ========== Jurisdiction ==========
-    # Do the jurisdiction check last to overwrite other fields that aren't relevant
-    # in a city (zone, overlay)
+    # Do the jurisdiction check last to overwrite other fields that aren't
+    # relevant in a city (zone, overlay)
     arcpy.AddMessage("Detecting Jurisdiction...")
-    arcpy.SelectLayerByLocation_management(muni_layer, "CONTAINS", parcel_layer,
-                                           selection_type = "NEW_SELECTION")
-    # Additional selection to grab any parcels that cross boundaries
-    arcpy.SelectLayerByLocation_management(muni_layer, "CROSSED_BY_THE_OUTLINE_OF",
+    arcpy.SelectLayerByLocation_management(muni_layer, "CONTAINS",
                                            parcel_layer,
-                                           selection_type = "ADD_TO_SELECTION")
+                                           selection_type="NEW_SELECTION")
+    # Additional selection to grab any parcels that cross boundaries
+    arcpy.SelectLayerByLocation_management(muni_layer,
+                                           "CROSSED_BY_THE_OUTLINE_OF",
+                                           parcel_layer,
+                                           selection_type="ADD_TO_SELECTION")
     muni_features = int(arcpy.GetCount_management(muni_layer).getOutput(0))
     if muni_features > 0:
         with arcpy.da.SearchCursor(muni_layer, "name") as muni_cursor:
@@ -238,7 +252,7 @@ try:
 
         loop_end = datetime.datetime.now()
         time_delta = str(loop_end - loop_start)
-        arcpy.AddMessage("%s took %s" %(layer, time_delta))
+        arcpy.AddMessage("%s took %s" % (layer, time_delta))
 
     # Trim service name from beginning of layer name
     trimmed_layers = [l.rpartition('\\')[2] for l in found_layers]
@@ -247,7 +261,7 @@ try:
     if len(trimmed_layers) > 0:
 
         # Split list into three columns
-        # Uses numpy.array, numpy.array_split to evenly split into three columns
+        # Uses numpy.array, numpy.array_split to evenly split into 3 columns
         layers_array = array(trimmed_layers)
         splits = array_split(layers_array, 3)
         fl1 = splits[0]
@@ -283,7 +297,7 @@ try:
             results3 = " "
 
     else:
-        results1 = "No areas requiring further analysis were found on, or within %d feet of, parcel %s." %(buffer_distance, parcel)
+        results1 = "No areas requiring further analysis were found on, or within %d feet of, parcel %s." % (buffer_distance, parcel)
 
     # ========== Set up map document ==========
     mxd = arcpy.mapping.MapDocument(mxd_file)
@@ -292,8 +306,8 @@ try:
 
     # Populate text boxes
     # Checks the text box's .text property to find the right textbox. In ArcMap
-    # layout view, set the location and size of the appropriate box and then set
-    # it's text to match these strings.
+    # layout view, set the location and size of the appropriate box and then
+    # set it's text to match these strings.
     text_boxes = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT")
     for box in text_boxes:
         if box.text == "pnum":
@@ -327,7 +341,7 @@ try:
     for l in layers:
         if l.name in trimmed_layers:
             l.visible = True
-            arcpy.AddMessage("Turning on %s" %(l.name))
+            arcpy.AddMessage("Turning on %s" % (l.name))
         elif l.name == "Parcels":
             p_layer = l
             l.visible = True
@@ -357,7 +371,8 @@ try:
     arcpy.SelectLayerByAttribute_management(parcel_layer, "CLEAR_SELECTION")
 
     # Create summary pdf
-    out_path = os.path.join(arcpy.env.scratchFolder, parcel + " Parcel Summary.pdf")
+    out_path = os.path.join(arcpy.env.scratchFolder,
+                            parcel + " Parcel Summary.pdf")
     arcpy.mapping.ExportToPDF(mxd, out_path)
 
     # Append legend to pdf
@@ -374,7 +389,8 @@ try:
     del mxd
 
 except arcpy.ExecuteError:
-    # Log the errors as warnings on the server (adding as errors would cause the task to fail)
+    # Log the errors as warnings on the server (adding as errors would cause
+    # the task to fail)
     arcpy.AddWarning(arcpy.GetMessages(2))
 
     # Pass the exception message to the user
@@ -389,11 +405,13 @@ except ValueError as ve:
     tb = sys.exc_info()[2]
     tbinfo = traceback.format_tb(tb)[0]
 
-    # Concatenate information together concerning the error into a message string
+    # Concatenate information together concerning the error into a message
+    # string
     pymsg = "PYTHON ERRORS:\nTraceback info:\n" + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
     msgs = "\nArcPy ERRORS:\n" + arcpy.GetMessages(2) + "\n"
 
-    # Log the errors as warnings on the server (adding as errors would cause the task to fail)
+    # Log the errors as warnings on the server (adding as errors would cause
+    # the task to fail)
     arcpy.AddWarning(pymsg)
     arcpy.AddWarning(msgs)
 
@@ -409,11 +427,13 @@ except Exception as e:
     tb = sys.exc_info()[2]
     tbinfo = traceback.format_tb(tb)[0]
 
-    # Concatenate information together concerning the error into a message string
+    # Concatenate information together concerning the error into a message
+    # string
     pymsg = "PYTHON ERRORS:\nTraceback info:\n" + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
     msgs = "\nArcPy ERRORS:\n" + arcpy.GetMessages(2) + "\n"
 
-    # Log the errors as warnings on the server (adding as errors would cause the task to fail)
+    # Log the errors as warnings on the server (adding as errors would cause
+    # the task to fail)
     arcpy.AddWarning(pymsg)
     arcpy.AddWarning(msgs)
 
@@ -426,3 +446,14 @@ except Exception as e:
 finally:
     output_string = "\n".join(messages)
     arcpy.SetParameterAsText(9, output_string)
+
+###
+# Legality
+# 1: Check if subdivision
+#   a: centroid of parcel
+#   b: is centroid in subdivision layer?
+# 2: Check if existed prior to 9 Aug 2006
+# Potential Legality Options:
+#   * Potentially part of a subdivision
+#   * Potentially existed as of 8 August 2006
+#   * Potentially restricted
