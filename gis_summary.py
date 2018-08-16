@@ -143,34 +143,49 @@ try:
     # Subdivision check
     # Create centroid
     centroid_fc = "in_memory\\centroids"
-    arcpy.FeatureToPoint_management(parcel_layer, centroid_fc,
-                                    point_location="INSIDE")
+    arcpy.Delete_management(centroid_fc)  # Just make sure it doesn't exist
+    # arcpy.FeatureToPoint_management(parcel_layer, centroid_fc,
+    #                                 point_location="INSIDE")
+
+    # Because server-side arcpy licensing is... special...
+    point = arcpy.da.FeatureClassToNumPyArray(parcel_layer, ["OID@", "SHAPE@XY"])
+    SR = arcpy.Describe(parcel_layer).spatialReference
+    arcpy.da.NumPyArrayToFeatureClass(point, centroid_fc, ['SHAPE@XY'], SR)
+
+    # DQ CUP's out of subdivision layer
+    cup_dq = "subdivision_location not like '% CUP%'"
+    nocup_layer = "nocup_layer"
+    arcpy.MakeFeatureLayer_management(subdivision_layer, nocup_layer, cup_dq)
     # select features from subdivision_layer that contain the centroid
-    arcpy.SelectLayerByLocation_management(subdivision_layer,
+    arcpy.SelectLayerByLocation_management(nocup_layer,
                                            "CONTAINS",
                                            centroid_fc,
-                                           selction_type="NEW_SELECTION")
+                                           selection_type="NEW_SELECTION")
     # If count is > 0, potential subdivision
-    subdivision_count = int(arcpy.GetCount_management(subdivision_layer).getOutput(0))
+    subdivision_count = int(arcpy.GetCount_management(nocup_layer).getOutput(0))
 
     # 2006 check
-    legal_where = "parcel_number = '%s'" % (parcel)
-    with arcpy.da.SearchCursor(legal_table, legal_fields, legal_where) as solo_cursor:
-        for row in solo_cursor:
-            # Gracefully handle no-values ("None"s) from table, cast all to
-            # str-- <Null> in table comes in as "None" type
-            str_row = ["" if f is None else str(f) for f in row]
-
-            #if something:
-            legal_check = True
+    exist_2006 = True
+    # legal_where = "parcel_number = '%s'" % (parcel)
+    # with arcpy.da.SearchCursor(legal_table, legal_fields, legal_where) as solo_cursor:
+    #     for row in solo_cursor:
+    #         # Gracefully handle no-values ("None"s) from table, cast all to
+    #         # str-- <Null> in table comes in as "None" type
+    #         str_row = ["" if f is None else str(f) for f in row]
+    #
+    #         #if something:
+    #         exist_2006 = True
 
     # Set legality variable
     if subdivision_count > 0:
-        legality = "Potentially a subdivision lot"
-    elif legal_check:
-        legality = "Existed as of August 8 2006"
+        if exist_2006:
+            legality = "Potentially a subdivision lot.\r\nParcel existed as of August 8, 2006."
+        else:
+            legality = "Potentially a subdivision lot.\r\nParcel did not exist as of August 8, 2006."
+    elif exist_2006:
+        legality = "Parcel existed as of August 8 2006."
     else:
-        legality = "Potentially restricted"
+        legality = "Potentially restricted.\r\nParcel did not exist as of August 8, 2006."
 
     # ========== County Zoning Info From Feature Class ==========
     arcpy.AddMessage("Reading from parcel feature class...")
