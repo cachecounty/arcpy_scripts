@@ -70,9 +70,9 @@ messages = []
 try:
     solo_fields = ["parcel_number", "owner_name", "owner_address1",
                    "owner_address2", "owner_city_state_zip",
-                   "property_address", "property_city", "acreage"]
+                   "property_address", "property_city", "acreage", "system_id"]
     parcel_fields = ["zone_primary", "zone_secondary"]
-    legal_fields = ["parcel_number", "2006_parcel"]
+    legal_fields = ["system_id"]
 
     # Fudge factor for selections to ensure no nearby areas are missed
     buffer_distance = 100
@@ -102,6 +102,10 @@ try:
 
     # Regex pattern for parcel IDs
     pattern = "[0-9]{2}-[0-9]{3}-[0-9]{4}"
+
+    # 2006 Legality checks
+    system_id = "unknown"  # system id linking current parcel to 2006 parcel
+    exist_2006 = False  # Default to not existing as of Aug 8 2006
 
     # ========== Subject Parcel ==========
     # Make sure parcel number matches proper format
@@ -138,8 +142,13 @@ try:
                 oname = str_row[1]
             if str_row[2] or str_row[3] or str_row[4]:
                 oaddr = str_row[2] + " " + str_row[3] + "\r\n" + str_row[4]
+            if str_row[8]:
+                system_id = str_row[8]
+                # arcpy.AddMessage("system_id: {}".format(system_id))
 
     # ========== Legality Check ==========
+    arcpy.AddMessage("Checking parcel legality...")
+
     # Subdivision check
     # Create centroid
     centroid_fc = "in_memory\\centroids"
@@ -165,27 +174,22 @@ try:
     subdivision_count = int(arcpy.GetCount_management(nocup_layer).getOutput(0))
 
     # 2006 check
-    exist_2006 = True
-    # legal_where = "parcel_number = '%s'" % (parcel)
-    # with arcpy.da.SearchCursor(legal_table, legal_fields, legal_where) as solo_cursor:
-    #     for row in solo_cursor:
-    #         # Gracefully handle no-values ("None"s) from table, cast all to
-    #         # str-- <Null> in table comes in as "None" type
-    #         str_row = ["" if f is None else str(f) for f in row]
-    #
-    #         #if something:
-    #         exist_2006 = True
+    legal_where = "system_id = '%s'" % (system_id)
+    results = [row for row in arcpy.da.SearchCursor(legal_table, legal_fields,
+               legal_where)]
+    if len(results) == 1:
+        exist_2006 = True
 
     # Set legality variable
     if subdivision_count > 0:
         if exist_2006:
-            legality = "Potentially a subdivision lot.\r\nParcel existed as of August 8, 2006."
+            legality = "Potentially a subdivision lot.\r\nConfiguration may match August 8, 2006."
         else:
-            legality = "Potentially a subdivision lot.\r\nParcel did not exist as of August 8, 2006."
+            legality = "Potentially a subdivision lot.\r\nConfiguration may differ from August 8, 2006."
     elif exist_2006:
-        legality = "Parcel existed as of August 8 2006."
+        legality = "Potentially a legal parcel.\r\nConfiguration may match August 8, 2006."
     else:
-        legality = "Potentially restricted.\r\nParcel did not exist as of August 8, 2006."
+        legality = "Potentially a restricted parcel.\r\nConfiguration may differ from August 8, 2006."
 
     # ========== County Zoning Info From Feature Class ==========
     arcpy.AddMessage("Reading from parcel feature class...")
@@ -269,6 +273,7 @@ try:
         # Overwrite fields not applicable to city parcels
         annex = "n/a"
         coverlay = "n/a"
+        legality = "Contact City for Applicable Regulations"
     else:
         jurisdiction = "County"
     arcpy.SelectLayerByAttribute_management(muni_layer, "CLEAR_SELECTION")
