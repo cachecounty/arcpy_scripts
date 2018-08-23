@@ -183,13 +183,13 @@ try:
     # Set legality variable
     if subdivision_count > 0:
         if exist_2006:
-            legality = "Potentially a subdivision lot.\r\nConfiguration may match August 8, 2006."
+            legality = "Potentially a subdivision lot\r\nAppears to have the same configuration as on August 8, 2006"
         else:
-            legality = "Potentially a subdivision lot.\r\nConfiguration may differ from August 8, 2006."
+            legality = "Potentially a subdivision lot\r\nDoes not appear to match its August 8, 2006 configuration"
     elif exist_2006:
-        legality = "Potentially a legal parcel.\r\nConfiguration may match August 8, 2006."
+        legality = "Legal parcel\r\nAppears to have the same configuration as on August 8, 2006"
     else:
-        legality = "Potentially a restricted parcel.\r\nConfiguration may differ from August 8, 2006."
+        legality = "Restricted parcel\r\nDoes not appear to match its August 8, 2006 configuration"
 
     # ========== County Zoning Info From Feature Class ==========
     arcpy.AddMessage("Reading from parcel feature class...")
@@ -272,10 +272,11 @@ try:
 
         # Overwrite fields not applicable to city parcels
         annex = "n/a"
+        czone = "Contact %s for Zoning" % (jurisdiction)
         coverlay = "n/a"
-        legality = "Contact City for Applicable Regulations"
+        legality = "Incorporated Area\r\nContact %s for Applicable Regulations" % (jurisdiction)
     else:
-        jurisdiction = "County"
+        jurisdiction = "Cache County"
     arcpy.SelectLayerByAttribute_management(muni_layer, "CLEAR_SELECTION")
 
     # ========== Sensitive Areas Check ==========
