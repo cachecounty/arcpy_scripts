@@ -401,7 +401,7 @@ try:
             l.visible = True
         elif l.name == "Roads":
             l.visible = True
-        elif l.name == "Municipal Boundaries":
+        elif l.name == "Municipal Solid":
             l.visible = True
         elif l.name == overlay_layer.rpartition('\\')[2] and show_overlay:
             l.visible = True
