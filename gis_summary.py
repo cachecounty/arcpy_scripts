@@ -57,6 +57,7 @@ mxd_file = arcpy.GetParameterAsText(9)  # File, MXD with layers and layout
 legend_pdf = arcpy.GetParameterAsText(10)  # File, P&Z produced legend and explanation
 # Parameter 11 is output messages
 # Parameter 12 is pdf out path
+# Parameter 13 is polygon of specified parcel
 
 # When sharing service, parcel parameter should be User Defined Value, all
 # others should be Constant Value.
@@ -79,6 +80,11 @@ try:
 
     # For some reason, some layer names are surrounded by ' while others aren't
     layers_to_check = [ly.replace("'", "") for ly in layers_raw]
+
+    # Scratch FC to hold output polygon
+    parcel_fc = os.path.join(arcpy.env.scratchGDB, "selected{}".format(parcel.replace('-', '_')))
+    if arcpy.Exists(parcel_fc):
+        arcpy.Delete_management(parcel_fc)
 
     # Set up text box variables
     # To set a text box to blank, you must pass " ". A simple "" (no space)
@@ -124,6 +130,10 @@ try:
     parcel_count = int(arcpy.GetCount_management(parcel_layer).getOutput(0))
     if parcel_count < 1:
         raise ValueError("No parcel found with Parcel ID of {}".format(parcel))
+
+    # Copy parcel to temp FC for output display
+    arcpy.CopyFeatures_management(parcel_layer, parcel_fc)
+    arcpy.SetParameter(13, parcel_fc)
 
     # ========== Solo Table Info ==========
     arcpy.AddMessage("Reading from solo table...")
