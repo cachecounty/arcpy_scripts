@@ -461,6 +461,10 @@ except arcpy.ExecuteError:
     # Use a bad link for the output pdf
     arcpy.SetParameter(12, "Error")
 
+    # create an empty FC for the output map
+    empty_fc = arcpy.CreateFeatureclass_management(arcpy.env.scratchGDB, "empty")
+    arcpy.SetParameter(13, empty_fc)
+
 except ValueError as ve:
     # Get the traceback object
     tb = sys.exc_info()[2]
@@ -483,6 +487,10 @@ except ValueError as ve:
     # Use a bad link for the output pdf
     arcpy.SetParameter(12, "Please fix Parcel ID and run tool again")
 
+    # create an empty FC for the output map
+    empty_fc = arcpy.CreateFeatureclass_management(arcpy.env.scratchGDB, "empty")
+    arcpy.SetParameter(13, empty_fc)
+
 except Exception as e:
     # Get the traceback object
     tb = sys.exc_info()[2]
@@ -503,6 +511,10 @@ except Exception as e:
 
     # Use a bad link for the output pdf
     arcpy.SetParameter(12, "ERROR")
+
+    # create an empty FC for the output map
+    empty_fc = arcpy.CreateFeatureclass_management(arcpy.env.scratchGDB, "empty")
+    arcpy.SetParameter(13, empty_fc)
 
 finally:
     output_string = "\n".join(messages)
