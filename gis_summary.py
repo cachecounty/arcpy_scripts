@@ -193,13 +193,13 @@ try:
     # Set legality variable
     if subdivision_count > 0:
         if exist_2006:
-            legality = "Potentially a subdivision lot\r\nAppears to have the same configuration as on August 8, 2006"
+            legality = "Potentially a subdivision lot, verify on plat\r\nAppears to have the same configuration as on August 8, 2006"
         else:
-            legality = "Potentially a subdivision lot\r\nDoes not appear to match its August 8, 2006 configuration"
+            legality = "Potentially a subdivision lot, verify on plat\r\nDoes not appear to match its August 8, 2006 configuration"
     elif exist_2006:
-        legality = "Legal parcel\r\nAppears to have the same configuration as on August 8, 2006"
+        legality = "Potentially a <BOL>legal</BOL> parcel\r\nAppears to have the same configuration as on August 8, 2006"
     else:
-        legality = "Restricted parcel\r\nDoes not appear to match its August 8, 2006 configuration"
+        legality = "Potentially a <BOL>restricted</BOL> parcel\r\nDoes not appear to match its August 8, 2006 configuration"
 
     # ========== County Zoning Info From Feature Class ==========
     arcpy.AddMessage("Reading from parcel feature class...")
